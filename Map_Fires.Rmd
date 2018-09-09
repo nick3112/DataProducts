@@ -1,0 +1,111 @@
+---
+title: "London Fire Incidents - Jan 2017 to July 2018"
+date: "9 September 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The data can be found here <https://data.london.gov.uk/dataset/london-fire-brigade-incident-records>
+
+<https://data.london.gov.uk/download/london-fire-brigade-incident-records/b8f76a50-c7a0-4ff4-b3e4-7a42c5d0e8e3/LFB%20Incident%20data%20from%20January%202017.xlsx>
+
+The **.xlsx** file was transformed manually into a **.csv** file.
+
+```{r import, include=FALSE, echo=FALSE, cache=TRUE, warning=FALSE}
+library(leaflet);
+library(rgdal);
+
+
+##final run
+df<-read.csv("C:\\Nick\\R\\fire incidents\\LFB Incident data from January 2017.csv");
+
+#df$Easting<-ifelse(df$Easting_m=="NULL",df$Easting_rounded,as.numeric(df$Easting_m))
+#df$Northing<-ifelse(df$Northing_m=="NULL",df$Northing_rounded,as.numeric(df$Northing_m))
+fires<-df[,c(32:33)];
+
+#setup to translate to long/lat
+# Variables for holding the coordinate system types
+ukgrid = "+init=epsg:27700";
+latlong = "+init=epsg:4326";
+#create a spatial frame
+fires$firesID <- 1:nrow(fires);
+# Create coordinates variable
+coords <- cbind(Easting = as.numeric(as.character(fires$Easting)),
+Northing = as.numeric(as.character(fires$Northing)));
+# Create the SpatialPointsDataFrame
+firesSP <- SpatialPointsDataFrame(coords, data = data.frame(fires$firesID), proj4string = CRS("+init=epsg:27700"));
+
+# Convert from Eastings and Northings to Latitude and Longitude
+firesLL <- spTransform(firesSP, CRS(latlong));
+
+# we also need to rename the columns
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Easting"] <- "Longitude";
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Northing"] <- "Latitude";
+
+##
+firesNew<-cbind(as.data.frame(firesLL@coords[,1]),as.data.frame(firesLL@coords[,2]));
+
+```
+
+```{r map, include=TRUE, echo=FALSE, cache=TRUE, fig.align='center'}
+
+##now run the map
+names(firesNew)<-c("Lon","Lat")
+firesNew %>%
+	leaflet() %>%
+	addTiles() %>%
+	addMarkers(clusterOptions=markerClusterOptions()) %>%
+	setView(-0.1386635,51.5072398,zoom=11)
+```
+
+##Data Processing Code
+
+The code used to process the data and produce the map is shown below for reference:
+
+```
+library(leaflet);
+library(rgdal);
+
+
+##final run
+df<-read.csv("C:\\Nick\\R\\fire incidents\\LFB Incident data from January 2017.csv");
+
+df$Easting<-ifelse(df$Easting_m=="NULL",df$Easting_rounded,as.numeric(df$Easting_m));
+df$Northing<-ifelse(df$Northing_m=="NULL",df$Northing_rounded,as.numeric(df$Northing_m));
+fires<-df[,c(32:33)];
+#setup to translate to long/lat
+# Variables for holding the coordinate system types
+ukgrid = "+init=epsg:27700";
+latlong = "+init=epsg:4326";
+#create a spatial frame
+fires$firesID <- 1:nrow(fires);
+# Create coordinates variable
+coords <- cbind(Easting = as.numeric(as.character(fires$Easting)),
+Northing = as.numeric(as.character(fires$Northing)));
+# Create the SpatialPointsDataFrame
+firesSP <- SpatialPointsDataFrame(coords, data = data.frame(fires$firesID), proj4string = CRS("+init=epsg:27700"));
+
+# Convert from Eastings and Northings to Latitude and Longitude
+firesLL <- spTransform(firesSP, CRS(latlong));
+
+# we also need to rename the columns
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Easting"] <- "Longitude";
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Northing"] <- "Latitude";
+
+##
+firesNew<-cbind(as.data.frame(firesLL@coords[,1]),as.data.frame(firesLL@coords[,2]));
+
+##now run the map
+names(firesNew)<-c("Lon","Lat");
+firesNew %>%
+	leaflet() %>%
+	addTiles() %>%
+	addMarkers(clusterOptions=markerClusterOptions()) %>%
+	setView(-0.1386635,51.5072398,zoom=11);
+
+#large number means a closer zoom
+
+```

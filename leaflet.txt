@@ -1,0 +1,231 @@
+##Assignment - Week2
+
+Create a web page using R Markdown that features a map created with Leaflet.
+
+Host your webpage on either GitHub Pages, RPubs, or NeoCities.
+
+Your webpage must contain the date that you created the document, and it must contain a map created with Leaflet. We would love to see you show off your creativity!
+
+Review criterialess 
+The rubric contains the following two questions:
+
+Does the web page feature a date and is this date less than two months before the date that you're grading this assignment?
+Does the web page feature an interactive map that appears to have been created with Leaflet?
+Example Submissionsless 
+Here's an extremely minimal passing example, but we hope your submission is much cooler!
+
+#########
+##Raw codes
+library(leaflet)
+
+
+
+#version1
+my_map<-leaflet() %>%
+	addTiles()
+my_map
+
+#version2 equivalent
+my_map=leaflet()
+my_map=addTiles(my_map)
+my_map
+
+#v3 adding markers
+my_map<-my_map %>%
+addMarkers(lat=39.2980803,lng=-76.5898801,popup="Jeff Leek's Office")
+my_map
+
+my_map2<-leaflet() %>%
+addTiles()
+my_map2
+
+my_map2<-my_map2 %>%
+addMarkers(lat=51.5031569,lng=-0.1216244,popup="The London Eye")
+my_map2
+
+#####
+## adding many markers from a data frame
+set.seed(2016-04-25)
+df<-data.frame(lat=runif(20,min=39.2,max=39.3),
+		lng=runif(20,min=-76.6,max=-76.5))
+df %>%
+	leaflet() %>%
+	addTiles() %>%
+	addMarkers()
+
+#####
+## making custom markers
+hopkinsIcon<-makeIcon(
+iconUrl="https://upload.wikimedia.org/wikipedia/commons/8/8b/Red_X_Freehand.svg",
+iconWidth=31*215/230,iconHeight=31,
+iconAnchorX=31*215/230/2,iconAnchorY=16
+)
+
+#https://upload.wikimedia.org/wikipedia/commons/8/8b/Red_X_Freehand.svg
+#http://brand.jhu.edu/content/uploads/2014/06/university.shield.small_.blue_.png
+
+hopkinsLatLong<-data.frame(
+lat=c(39.2973166, 39.3288851, 39.2906617, 39.2970681, 39.2825806),
+lng=c(-76.5929798, -76.6206598, -76.5469683, -76.6150537, -76.6016766))
+
+hopkinsLatLong %>%
+leaflet() %>%
+addTiles() %>%
+addMarkers(icon=hopkinsIcon)
+
+hopkinsSites <- c(
+"<a href='http://www.jhsph.edu/'>East Balitimore Campus</a>",
+"<a href='https://apply.jhu.edu/visit/homewood/'>Homewood Campus<a/>",
+"<a href='http://www.hopkinsmedicine.org/johns_hopkins_bayview/'>Bayview Medical Centre</a>",
+"<a href='http://www.peabody.jhu.edu/'>Peabody Institute</a>",
+"<a href='http://carey.jhu.edu/'>Carey Business School</a>"
+)
+
+hopkinsLatLong %>%
+leaflet() %>%
+addTiles() %>%
+addMarkers(icon=hopkinsIcon, popup=hopkinsSites)
+
+#####
+## mapping clusters
+set.seed(2016-04-25)
+df<-data.frame(lat=runif(500,min=39.2,max=39.3),
+		lng=runif(500,min=-76.6,max=-76.5))
+df %>%
+	leaflet() %>%
+	addTiles() %>%
+	addMarkers(clusterOptions=markerClusterOptions())
+
+
+###
+## add a legend
+
+set.seed(2016-04-25)
+df<-data.frame(lat=runif(20,min=39.25,max=39.35),
+		lng=runif(20,min=-76.65,max=-76.55),
+		col=sample(c("red","blue","green"),20,replace=TRUE),
+		stringsAsFactors=FALSE)
+
+df %>%
+leaflet() %>%
+addTiles() %>%
+addCircleMarkers(color=df$col) %>%
+addLegend(labels=LETTERS[1:3],colors=c("blue","red","green"))
+
+
+#####
+## draw rectangles
+leaflet() %>%
+addTiles() %>%
+addRectangles(lat1 = 37.3858, lng1=-122.0595, lat2=37.3890,lng2=-122.0625)
+
+####
+## draw circles (weighted to the population)
+
+md_cities<-data.frame(name=c("Baltimore","Frederick","Rockville","Gaithersburg","Bowie","Hagerstown","Annapolis","College Park","Salisbury","Laurel"),
+pop=c(619493,66169,62334,61045,55232,39890,38880,30587,30484,25346),
+lat=c(39.2920592,39.4143921,39.0840,39.1434,39.0068,39.6418,38.9784,38.9897,38.3607,39.0993),
+lng=c(-76.6077852,-77.4204875, -77.1528,-77.2014,-76.7791,-77.7200,-76.4922,-76.9378,-75.5994,-76.8483))
+
+md_cities %>%
+leaflet() %>%
+addTiles() %>%
+addCircles(weight=1,radius=sqrt(md_cities$pop)*30)
+
+
+
+######################################
+## assignment
+df<-read.csv("C:\\Nick\\R\\fire incidents\\LFB Incident data from January 2017.csv",nrow=100)
+
+#df$Easting<-ifelse(df$Easting_m=="NULL",df$Easting_rounded,as.numeric(df$Easting_m))
+#df$Northing<-ifelse(df$Northing_m=="NULL",df$Northing_rounded,as.numeric(df$Northing_m))
+head(df)
+fires<-df[,c(32:33)]
+
+#setup to translate to long/lat
+library(rgdal)
+# Variables for holding the coordinate system types (see:
+# http://www.epsg.org/ for details)
+ukgrid = "+init=epsg:27700"
+latlong = "+init=epsg:4326"
+#create a spatial frame
+fires$firesID <- 1:nrow(fires)
+# Create coordinates variable
+coords <- cbind(Easting = as.numeric(as.character(fires$Easting)),
+Northing = as.numeric(as.character(fires$Northing)))
+# Create the SpatialPointsDataFrame
+firesSP <- SpatialPointsDataFrame(coords, data = data.frame(fires$firesID), proj4string = CRS("+init=epsg:27700"))
+
+##site to convert east/north to long lat...
+#http://www.alex-singleton.com/R-Tutorial-Materials/7-converting-coordinates.pdf
+
+# Convert from Eastings and Northings to Latitude and Longitude
+firesLL <- spTransform(firesSP, CRS(latlong))
+
+# we also need to rename the columns
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Easting"] <- "Longitude"
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Northing"] <- "Latitude"
+
+#explore the data
+head(firesLL@coords)
+plot(firesLL@coords)
+nrow(firesLL)
+
+##
+firesNew<-cbind(as.data.frame(firesLL@coords[,1]),as.data.frame(firesLL@coords[,2]))
+head(firesNew)
+
+##now map
+library(leaflet)
+names(firesNew)<-c("Lon","Lat")
+firesNew %>%
+	leaflet() %>%
+	addTiles() %>%
+	addMarkers(clusterOptions=markerClusterOptions())
+
+
+#####################################
+
+library(leaflet)
+library(rgdal)
+
+
+##final run
+df<-read.csv("C:\\Nick\\R\\fire incidents\\LFB Incident data from January 2017.csv")
+
+#df$Easting<-ifelse(df$Easting_m=="NULL",df$Easting_rounded,as.numeric(df$Easting_m))
+#df$Northing<-ifelse(df$Northing_m=="NULL",df$Northing_rounded,as.numeric(df$Northing_m))
+head(df)
+fires<-df[,c(32:33)]
+
+#setup to translate to long/lat
+# Variables for holding the coordinate system types
+ukgrid = "+init=epsg:27700"
+latlong = "+init=epsg:4326"
+#create a spatial frame
+fires$firesID <- 1:nrow(fires)
+# Create coordinates variable
+coords <- cbind(Easting = as.numeric(as.character(fires$Easting)),
+Northing = as.numeric(as.character(fires$Northing)))
+# Create the SpatialPointsDataFrame
+firesSP <- SpatialPointsDataFrame(coords, data = data.frame(fires$firesID), proj4string = CRS("+init=epsg:27700"))
+
+# Convert from Eastings and Northings to Latitude and Longitude
+firesLL <- spTransform(firesSP, CRS(latlong))
+
+# we also need to rename the columns
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Easting"] <- "Longitude"
+colnames(firesLL@coords)[colnames(firesLL@coords) == "Northing"] <- "Latitude"
+
+##
+firesNew<-cbind(as.data.frame(firesLL@coords[,1]),as.data.frame(firesLL@coords[,2]))
+
+##now map
+names(firesNew)<-c("Lon","Lat")
+firesNew %>%
+	leaflet() %>%
+	addTiles() %>%
+	addMarkers(clusterOptions=markerClusterOptions())
+
+
